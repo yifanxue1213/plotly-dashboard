@@ -27,5 +27,11 @@ Use MySQL database running on localhost to store and management the data.
 > Not using SQLite3 for concurrent access problem
 
 ##### Database Data Scheme
-|ID | Time Stamp | T1 | ... | Tn | Voltage | Power | Speed |
+|id | timestamp | t1 | ... | tn | voltage | power | speed |
 |--- |:-:| :-:| :-:| :-:| :-:| :-:| --:|
+
+`id` is auto increment int as primary key,
+`timestamp` is the default timestamp when insert.
+
+`t1` to `tn` is the n temperature sensors, in double.
+`voltage`, `power`, `speed` are reading from sensors, in double.
