@@ -9,8 +9,7 @@ from flask import Flask
 import numpy as np
 import pandas as pd
 import os
-import sqlite3
-import datetime as dt
+import pymysql
 
 app = dash.Dash('Solar-Car-Monitor-Dashboard')
 server = app.server
@@ -66,17 +65,16 @@ app.layout = html.Div([
 # Callback for temp update
 @app.callback(Output('dynamic-temp', 'figure'), [Input('dynamic-temp-update', 'n_intervals')])
 def get_temp(interval):
-    now = dt.datetime.now()
-    sec = now.second
-    minute = now.minute
-    hour = now.hour
-
-    total_time = (hour * 3600) + (minute * 60) + (sec)
-
-    con = sqlite3.connect("./Data/wind-data.db")
-    df = pd.read_sql_query('SELECT Speed, SpeedError, Direction from Wind where\
-                            rowid > "{}" AND rowid <= "{}";'
-                            .format(total_time-200, total_time), con)
+    # con = sqlite3.connect("./Data/wind-data.db")
+    con = pymysql.connect(host='localhost',
+                                 port= 8889,
+                                 user='uscsolar',
+                                 password='solarcar',
+                                 db='uscsolarcar',
+                                 charset='utf8',
+                                 cursorclass=pymysql.cursors.DictCursor)
+    df = pd.read_sql_query('SELECT t1, t2, t3 from test_table ORDER BY id DESC LIMIT 1;', con)
+    con.close()
 
     layout = go.Layout(
         height=450,
@@ -84,12 +82,12 @@ def get_temp(interval):
             title='Temperature Sensors'
         ),
         yaxis=dict(
-            range=[min(0, min(df['Speed'])),
-                   max(45, max(df['Speed'])+max(df['SpeedError']))],
+            # range=[min(0, min(df['Speed'])),
+            #        max(45, max(df['Speed'])+max(df['SpeedError']))],
+            range=[30, 150],
             showline=False,
             fixedrange=True,
-            zeroline=False,
-            nticks=max(6, round(df['Speed'].iloc[-1]/10))
+            zeroline=False
         ),
         margin=go.layout.Margin(
             t=45,
@@ -102,19 +100,32 @@ def get_temp(interval):
     uscRed = 'rgba(142, 26, 17, 1)'
     normalBlue = 'rgba(54, 119, 175, 1)'
     colors = [normalBlue] * numOfTempSensors
-    tempLowerBound = 8
-    tempUpperBound = 20
+    tempLowerBound = 60
+    tempUpperBound = 90
 
-    for i in range(0, numOfTempSensors):
-        if (df['Speed'][i] < tempLowerBound) or (df['Speed'][i] > tempUpperBound):
-            colors[i] = uscRed
-        else:
-            colors[i] = normalBlue
+    if (df['t1'][0] < tempLowerBound) or (df['t1'][0] > tempUpperBound):
+        colors[0] = uscRed
+    else:
+        colors[0] = normalBlue
+    if (df['t2'][0] < tempLowerBound) or (df['t2'][0] > tempUpperBound):
+        colors[1] = uscRed
+    else:
+        colors[1] = normalBlue
+    if (df['t3'][0] < tempLowerBound) or (df['t3'][0] > tempUpperBound):
+        colors[2] = uscRed
+    else:
+        colors[2] = normalBlue
+
+    # for i in range(0, numOfTempSensors):
+    #     if (df['Speed'][i] < tempLowerBound) or (df['Speed'][i] > tempUpperBound):
+    #         colors[i] = uscRed
+    #     else:
+    #         colors[i] = normalBlue
     trace = go.Bar(
-        x=['c3','b2','a1'],
-        y=[df.iloc[-3]['Speed'],df.iloc[-2]['Speed'],df.iloc[-1]['Speed']],
+        x=['t1','t2','t3'],
+        y=[df['t1'][0],df['t2'][0],df['t3'][0]],
         hoverinfo='y',
-        text=[df.iloc[-3]['Speed'],df.iloc[-2]['Speed'],df.iloc[-1]['Speed']],
+        text=[df['t1'][0],df['t2'][0],df['t3'][0]],
         textposition='auto',
         marker=dict(
             color=colors
@@ -127,20 +138,29 @@ def get_temp(interval):
 # Callback for voltage update
 @app.callback(Output('dynamic-voltage', 'figure'), [Input('dynamic-voltage-update', 'n_intervals')])
 def get_voltage(interval):
-    now = dt.datetime.now()
-    sec = now.second
-    minute = now.minute
-    hour = now.hour
+    # now = dt.datetime.now()
+    # sec = now.second
+    # minute = now.minute
+    # hour = now.hour
+    #
+    # total_time = (hour * 3600) + (minute * 60) + (sec)
 
-    total_time = (hour * 3600) + (minute * 60) + (sec)
-
-    con = sqlite3.connect("./Data/wind-data.db")
-    df = pd.read_sql_query('SELECT Speed, SpeedError, Direction from Wind where\
-                            rowid > "{}" AND rowid <= "{}";'
-                            .format(total_time-200, total_time), con)
+    con = pymysql.connect(host='localhost',
+                          port=8889,
+                          user='uscsolar',
+                          password='solarcar',
+                          db='uscsolarcar',
+                          charset='utf8',
+                          cursorclass=pymysql.cursors.DictCursor)
+    df = pd.read_sql_query('SELECT voltage from test_table ORDER BY id DESC LIMIT 80;', con)
+    con.close()
+    # con = sqlite3.connect("./Data/wind-data.db")
+    # df = pd.read_sql_query('SELECT Speed, SpeedError, Direction from Wind where\
+    #                         rowid > "{}" AND rowid <= "{}";'
+    #                         .format(total_time-200, total_time), con)
 
     trace = go.Scatter(
-        y=df['Speed'],
+        y=df['voltage'],
         line= go.scatter.Line(
             color='#990000'
         ),
@@ -150,22 +170,22 @@ def get_voltage(interval):
     layout = go.Layout(
         height=450,
         xaxis=dict(
-            range=[0, 200],
+            # range=[0, 200],
             showgrid=False,
             showline=False,
             zeroline=False,
             fixedrange=True,
-            tickvals=[0, 50, 100, 150, 200],
-            ticktext=['200', '150', '100', '50', '0'],
+            # tickvals=[0, 50, 100, 150, 200],
+            # ticktext=['200', '150', '100', '50', '0'],
             title='Time Elapsed (sec)'
         ),
         yaxis=dict(
-            range=[min(0, min(df['Speed'])),
-                   max(45, max(df['Speed'])+max(df['SpeedError']))],
+             range=[min(0, min(df['voltage'])),
+                    max(5, max(df['voltage']))],
             showline=False,
             fixedrange=True,
             zeroline=False,
-            nticks=max(6, round(df['Speed'].iloc[-1]/10))
+            nticks=max(6, round(df['voltage'].iloc[-1]/10))
         ),
         margin=go.layout.Margin(
             t=45,
@@ -182,20 +202,19 @@ def get_voltage(interval):
               [Input('dynamic-voltage-update', 'n_intervals')])
 def get_power(interval):
     # get power data
-    now = dt.datetime.now()
-    sec = now.second
-    minute = now.minute
-    hour = now.hour
 
-    total_time = (hour * 3600) + (minute * 60) + (sec)
-
-    con = sqlite3.connect("./Data/wind-data.db")
-    df = pd.read_sql_query('SELECT Speed, SpeedError, Direction from Wind where\
-                                rowid > "{}" AND rowid <= "{}";'
-                           .format(total_time - 200, total_time), con)
+    con = pymysql.connect(host='localhost',
+                          port=8889,
+                          user='uscsolar',
+                          password='solarcar',
+                          db='uscsolarcar',
+                          charset='utf8',
+                          cursorclass=pymysql.cursors.DictCursor)
+    df = pd.read_sql_query('SELECT power from test_table ORDER BY id DESC LIMIT 80;', con)
+    con.close()
 
     trace = go.Scatter(
-        y=df['Speed'],
+        y=df['power'],
         line= go.scatter.Line(
             color='#990000'
         ),
@@ -203,24 +222,24 @@ def get_power(interval):
     )
 
     layout = go.Layout(
-        height=450,
+        # height=450,
         xaxis=dict(
-            range=[0, 200],
+            # range=[0, 200],
             showgrid=False,
             showline=False,
             zeroline=False,
             fixedrange=True,
-            tickvals=[0, 50, 100, 150, 200],
-            ticktext=['200', '150', '100', '50', '0'],
+            # tickvals=[0, 50, 100, 150, 200],
+            # ticktext=['200', '150', '100', '50', '0'],
             title='Time Elapsed (sec)'
         ),
         yaxis=dict(
-            range=[min(0, min(df['Speed'])),
-                   max(45, max(df['Speed'])+max(df['SpeedError']))],
+            range=[min(0, min(df['power'])),
+                   max(50, max(df['power']))],
             showline=False,
             fixedrange=True,
             zeroline=False,
-            nticks=max(6, round(df['Speed'].iloc[-1]/10))
+            nticks=max(6, round(df['power'].iloc[-1]/10))
         ),
         margin=go.layout.Margin(
             t=45,
@@ -235,20 +254,19 @@ def get_power(interval):
 # Callback for speed update
 @app.callback(Output('dynamic-speed', 'figure'), [Input('dynamic-speed-update', 'n_intervals')])
 def get_temp(interval):
-    now = dt.datetime.now()
-    sec = now.second
-    minute = now.minute
-    hour = now.hour
 
-    total_time = (hour * 3600) + (minute * 60) + (sec)
-
-    con = sqlite3.connect("./Data/wind-data.db")
-    df = pd.read_sql_query('SELECT Speed, SpeedError, Direction from Wind where\
-                            rowid > "{}" AND rowid <= "{}";'
-                            .format(total_time-200, total_time), con)
+    con = pymysql.connect(host='localhost',
+                          port=8889,
+                          user='uscsolar',
+                          password='solarcar',
+                          db='uscsolarcar',
+                          charset='utf8',
+                          cursorclass=pymysql.cursors.DictCursor)
+    df = pd.read_sql_query('SELECT speed from test_table ORDER BY id DESC LIMIT 200;', con)
+    con.close()
 
     trace = go.Scatter(
-        y=df['Speed'],
+        y=df['speed'],
         line= go.scatter.Line(
             color='#990000'
         ),
@@ -268,12 +286,12 @@ def get_temp(interval):
             title='Time Elapsed (sec)'
         ),
         yaxis=dict(
-            range=[min(0, min(df['Speed'])),
-                   max(45, max(df['Speed'])+max(df['SpeedError']))],
+            range=[min(0, min(df['speed'])),
+                   max(45, max(df['speed']))],
             showline=False,
             fixedrange=True,
             zeroline=False,
-            nticks=max(6, round(df['Speed'].iloc[-1]/10))
+            nticks=max(6, round(df['speed'].iloc[-1]/10))
         ),
         margin=go.layout.Margin(
             t=45,
