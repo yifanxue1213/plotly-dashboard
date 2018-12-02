@@ -4,20 +4,31 @@ import time
 import pymysql.cursors
 from enum import Enum
 
-numOfTempSensors = 3
-tableName = 'test_table'
+numOfTempSensors = 24
+numOfVoltageSensors = 28
+voltageTableName = 'voltage'
+tempratureTableName = 'temporature'
+motorTableName = 'motor'
+workConditionTableName = 'workCondition'
+DBHost = 'localhost'
 DBPort = 8889
+DBName = 'uscsolarcar'
+DBUser = 'uscsolar'
+DBPasswd = 'solarcar'
+
+DEBUG = 1 # 2 for verbose, 1 for simple debug put, 0 for non debug info
 
 
+# still need to change to update database in a less frequency
 if __name__ == '__main__':
-    # serialPort = '/dev/ttyUSB0'
-    serialPort = '/dev/tty.usbserial-1410'
+    # use `ls /dev/tty.usb*` to find the proper port for current experiment
+    serialPort = '/dev/tty.usbserial-14520'
     # connect to DB
-    connection = pymysql.connect(host='localhost',
+    connection = pymysql.connect(host=DBHost,
                                  port= DBPort,
-                                 user='uscsolar',
-                                 password='solarcar',
-                                 db='uscsolarcar',
+                                 user=DBUser,
+                                 password=DBPasswd,
+                                 db=DBName,
                                  charset='utf8',
                                  cursorclass=pymysql.cursors.DictCursor)
     with serial.Serial(port=serialPort,
@@ -29,41 +40,86 @@ if __name__ == '__main__':
         ser.flushInput()
         print("Serial " + ser.name + " set up with port " + serialPort + "!")
 
-        dataArray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # t1 t2 t3 voltage power speed
+        voltageArray = [0.0] * numOfVoltageSensors
+        tempratureArray = [0.0] * numOfTempSensors
+        sql = ""
 
         # loop for read serial data and store into MySQL
         while True:
             try:
-                i = 0
-                while i < 6:
-                    # assume reading from line is byte for string, this string is the string form of double value
-                    line = ser.readline().decode("utf-8")  # decode byte array into string  # readline(timeout=1)
-                    print(line)
-                    if line.rstrip() == "":
-                        i = 0
-                        continue
-                    curVal = float(line)
-                    # curVal = int.from_bytes(line, byteorder='big', signed=False) # parse byte int into int
-                    dataArray[i] = curVal
-                    i += 1
-
-                with connection.cursor() as cursor:
-                    sql = "INSERT INTO `" + tableName + \
-                          "` (`t1`, `t2`, `t3`, `voltage`, `power`, `speed`) VALUES (%s, %s, %s, %s, %s, %s)"
-                    cursor.execute(sql,
-                                   (dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], dataArray[5]))
+                line = ser.readline().decode("utf-8")  # decode byte array into string  # readline(timeout=1)
+                if DEBUG > 1:
+                    print("DEBUG: " + line)
+                if line.rstrip() == "":
+                    continue
+                tokens = str.split(str=" ")
+                if tokens[0] == "voltage":
+                    # generate SQL query
+                    sql = "INSERT INTO `" + voltageTableName + "` ("
+                    sqlValues = ""
+                    # parse value
+                    for i in range(0, numOfVoltageSensors):
+                        voltageArray[i] = float(tokens[i + 1])
+                        sql = sql + "`voltage" + (i + 1) + "`, "
+                        sqlValues = sqlValues + "%s, "
+                    sql = sql[:-2] + ") VALUES (" + sqlValues[:-2] + ")"
+                    if DEBUG > 1:
+                        print("DEBUG: " + sql)
+                    # execute query
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql, voltageArray)
+                elif tokens[0] == "temporature":
+                    sql = "INSERT INTO `" + tempratureTableName + "` ("
+                    sqlValues = ""
+                    for i in range(0, numOfTempSensors):
+                        tempratureArray[i] = float(tokens[i + 1])
+                        sql = sql + "`temp" + (i + 1) + "`, "
+                        sqlValues = sqlValues + "%s, "
+                    sql = sql[:-2] + ") VALUES (" + sqlValues[:-2] + ")"
+                    if DEBUG > 1:
+                        print("DEBUG: " + sql)
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql, tempratureArray)
+                elif tokens[0] == "motor":
+                    motorOpCurrent = float(tokens[1])
+                    rpm = int(tokens[2])
+                    sql = "INSERT INTO `" + motorTableName + \
+                          "` (`current`, `rpm`) VALUES (%s, %s)"
+                    if DEBUG > 1:
+                        print("DEBUG: " + sql)
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql, (motorOpCurrent, rpm))
+                elif tokens[0] == "condition":
+                    outputVoltage = float(tokens[3])
+                    sql = "INSERT INTO `" + workConditionTableName + \
+                          "` (`outputVoltage`) VALUES (%s)"
+                    if DEBUG > 1:
+                        print("DEBUG: " + sql)
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql, (outputVoltage))
 
                 connection.commit()
 
                 # debug print
-                with connection.cursor() as cursor:
-                    # Read a single record
-                    sql = "SELECT `*` FROM `" + tableName + "` ORDER BY `id` DESC LIMIT 1"
-                    cursor.execute(sql)
-                    result = cursor.fetchone()
-                    print(result)
-
-                # print(datetime.datetime.now() + ": " + line)
+                if DEBUG > 1:
+                    with connection.cursor() as cursor:
+                        # Read a single record
+                        sql = "SELECT `*` FROM `" + voltageTableName + "` ORDER BY `id` DESC LIMIT 1"
+                        cursor.execute(sql)
+                        result = cursor.fetchone()
+                        print("DEBUG: \n" + result)
+                        sql = "SELECT `*` FROM `" + tempratureTableName + "` ORDER BY `id` DESC LIMIT 1"
+                        cursor.execute(sql)
+                        result = cursor.fetchone()
+                        print("DEBUG: \n" + result)
+                        sql = "SELECT `*` FROM `" + motorTableName + "` ORDER BY `id` DESC LIMIT 1"
+                        cursor.execute(sql)
+                        result = cursor.fetchone()
+                        print("DEBUG: \n" + result)
+                        sql = "SELECT `*` FROM `" + workConditionTableName + "` ORDER BY `id` DESC LIMIT 1"
+                        cursor.execute(sql)
+                        result = cursor.fetchone()
+                        print("DEBUG: \n" + result)
             except KeyboardInterrupt:
                 ser.close()
                 break
