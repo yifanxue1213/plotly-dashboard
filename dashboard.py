@@ -30,32 +30,37 @@ app.layout = html.Div([
     ], className='row dynamic-line-row'),
     html.Div([
         html.Div([
+            html.H3("Voltages (V)")
+        ], className='Title'),
+        html.Div([
+            dcc.Graph(id='dynamic-voltage'),
+        ], className='twelve columns dynamic-temp'),
+        dcc.Interval(id='dynamic-voltage-update', interval=1000, n_intervals=0),
+    ], className='row dynamic-line-row'),
+    html.Div([
+        html.Div([
             html.Div([
-                html.H3("Voltages (V)")
+                html.H3("Ave Voltages (V)")
             ], className='Title'),
-            html.Div([
-                dcc.Graph(id='dynamic-voltage'),
-            ], className='dynamic-voltage'),
-            dcc.Interval(id='dynamic-voltage-update', interval=1000, n_intervals=0),
+            html.Div(id='ave-voltage'),
+            dcc.Interval(id='realtime-average-voltage-update', interval=1000, n_intervals=0),
         ], className='six columns dynamic-line-row'),
         html.Div([
             html.Div([
-                html.H3("Power (W)")
+                html.H3("RPM")
             ], className='Title'),
-            html.Div([
-                dcc.Graph(id='dynamic-power'),
-            ], className='dynamic-power'),
-            dcc.Interval(id='dynamic-power-update', interval=1000, n_intervals=0),
-        ], className='six columns dynamic-line-row')
+            html.Div(id='rpm-value'),
+            dcc.Interval(id='realtime-rpm-update', interval=1000, n_intervals=0),
+        ], className='six columns dynamic-line-row'),
     ], className='row wind-histo-polar'),
     html.Div([
         html.Div([
-            html.H3("Speed (M/H)")
+            html.H3("Operating Current (A)")
         ], className='Title'),
         html.Div([
-            dcc.Graph(id='dynamic-speed'),
-        ], className='twelve columns dynamic-speed'),
-        dcc.Interval(id='dynamic-speed-update', interval=1000, n_intervals=0),
+            dcc.Graph(id='dynamic-op-current'),
+        ], className='twelve columns dynamic-op-current'),
+        dcc.Interval(id='dynamic-op-current-update', interval=1000, n_intervals=0),
     ], className='row dynamic-line-row'),
 ], style={'padding': '0px 10px 15px 10px',
           'marginLeft': 'auto', 'marginRight': 'auto', "width": "75%",
@@ -65,7 +70,6 @@ app.layout = html.Div([
 # Callback for temp update
 @app.callback(Output('dynamic-temp', 'figure'), [Input('dynamic-temp-update', 'n_intervals')])
 def get_temp(interval):
-    # con = sqlite3.connect("./Data/wind-data.db")
     con = pymysql.connect(host='localhost',
                                  port= 8889,
                                  user='uscsolar',
@@ -73,7 +77,13 @@ def get_temp(interval):
                                  db='uscsolarcar',
                                  charset='utf8',
                                  cursorclass=pymysql.cursors.DictCursor)
-    df = pd.read_sql_query('SELECT t1, t2, t3 from test_table ORDER BY id DESC LIMIT 1;', con)
+    df = pd.read_sql_query("SELECT temp1, temp2, temp3, temp4," +
+                           " temp5, temp6, temp7, temp8," +
+                           " temp9, temp10, temp11, temp12," +
+                           " temp13, temp14, temp15, temp16," +
+                           " temp17, temp18, temp19, temp20," +
+                           " temp21, temp22, temp23, temp24," +
+                           " from temporature ORDER BY id DESC LIMIT 1;", con)
     con.close()
 
     layout = go.Layout(
@@ -96,36 +106,30 @@ def get_temp(interval):
         )
     )
 
-    numOfTempSensors = 3
+    numOfTempSensors = 24
     uscRed = 'rgba(142, 26, 17, 1)'
     normalBlue = 'rgba(54, 119, 175, 1)'
     colors = [normalBlue] * numOfTempSensors
     tempLowerBound = 60
-    tempUpperBound = 90
+    tempUpperBound = 95
 
-    if (df['t1'][0] < tempLowerBound) or (df['t1'][0] > tempUpperBound):
-        colors[0] = uscRed
-    else:
-        colors[0] = normalBlue
-    if (df['t2'][0] < tempLowerBound) or (df['t2'][0] > tempUpperBound):
-        colors[1] = uscRed
-    else:
-        colors[1] = normalBlue
-    if (df['t3'][0] < tempLowerBound) or (df['t3'][0] > tempUpperBound):
-        colors[2] = uscRed
-    else:
-        colors[2] = normalBlue
+    xLabels = []
+    valueList = []
+    for i in range(0, numOfTempSensors):
+        tmpInd = "temp" + str(i + 1)
+        tempLable = "t" + str(i + 1)
+        if (df[tmpInd][0] < tempLowerBound) or (df[tmpInd][0] > tempUpperBound):
+            colors[i] = uscRed
+        else:
+            colors[i] = normalBlue
+        xLabels.append(tempLable)
+        valueList.append(df[tmpInd][0])
 
-    # for i in range(0, numOfTempSensors):
-    #     if (df['Speed'][i] < tempLowerBound) or (df['Speed'][i] > tempUpperBound):
-    #         colors[i] = uscRed
-    #     else:
-    #         colors[i] = normalBlue
     trace = go.Bar(
-        x=['t1','t2','t3'],
-        y=[df['t1'][0],df['t2'][0],df['t3'][0]],
+        x=xLabels,
+        y=valueList,
         hoverinfo='y',
-        text=[df['t1'][0],df['t2'][0],df['t3'][0]],
+        text=valueList,
         textposition='auto',
         marker=dict(
             color=colors
@@ -138,12 +142,119 @@ def get_temp(interval):
 # Callback for voltage update
 @app.callback(Output('dynamic-voltage', 'figure'), [Input('dynamic-voltage-update', 'n_intervals')])
 def get_voltage(interval):
-    # now = dt.datetime.now()
-    # sec = now.second
-    # minute = now.minute
-    # hour = now.hour
-    #
-    # total_time = (hour * 3600) + (minute * 60) + (sec)
+    con = pymysql.connect(host='localhost',
+                                 port= 8889,
+                                 user='uscsolar',
+                                 password='solarcar',
+                                 db='uscsolarcar',
+                                 charset='utf8',
+                                 cursorclass=pymysql.cursors.DictCursor)
+    df = pd.read_sql_query("SELECT voltage1, voltage2, voltage3, voltage4," +
+                           " voltage5, voltage6, voltage7, voltage8," +
+                           " voltage9, voltage10, voltage11, voltage12," +
+                           " voltage13, voltage14, voltage15, voltage16," +
+                           " voltage17, voltage18, voltage19, voltage20," +
+                           " voltage21, voltage22, voltage23, voltage24," +
+                           " voltage25, voltage26, voltage27, voltage28," +
+                           " from voltage ORDER BY id DESC LIMIT 1;", con)
+    con.close()
+
+    layout = go.Layout(
+        height=450,
+        xaxis=dict(
+            title='Voltage Sensors'
+        ),
+        yaxis=dict(
+            range=[min(0, min(df['voltage'])),
+                   max(5, max(df['voltage']))],
+            showline=False,
+            fixedrange=True,
+            zeroline=False
+        ),
+        margin=go.layout.Margin(
+            t=45,
+            l=50,
+            r=50
+        )
+    )
+
+    numOfTempSensors = 28
+    uscRed = 'rgba(142, 26, 17, 1)'
+    normalBlue = 'rgba(54, 119, 175, 1)'
+    colors = [normalBlue] * numOfTempSensors
+    tempLowerBound = 2.5
+    tempUpperBound = 4.5
+
+    xLabels = []
+    valueList = []
+    for i in range(0, numOfTempSensors):
+        tmpInd = "voltage" + str(i + 1)
+        tempLable = "v" + str(i + 1)
+        if (df[tmpInd][0] < tempLowerBound) or (df[tmpInd][0] > tempUpperBound):
+            colors[i] = uscRed
+        else:
+            colors[i] = normalBlue
+        valueList.append(df[tmpInd][0])
+        xLabels.append(tempLable)
+
+    trace = go.Bar(
+        x=xLabels,
+        y=valueList,
+        hoverinfo='y',
+        text=valueList,
+        textposition='auto',
+        marker=dict(
+            color=colors
+        ),
+    )
+
+    return go.Figure(data=[trace], layout=layout)
+
+# Callback for rpm update
+@app.callback(Output(component_id='ave-voltage', component_property='children'),
+    [Input('realtime-average-voltage-update', 'n_intervals')])
+def update_rpm(interval):
+    # get voltages
+    con = pymysql.connect(host='localhost',
+                          port=8889,
+                          user='uscsolar',
+                          password='solarcar',
+                          db='uscsolarcar',
+                          charset='utf8',
+                          cursorclass=pymysql.cursors.DictCursor)
+    df = pd.read_sql_query("SELECT voltage1, voltage2, voltage3, voltage4," +
+                           " voltage5, voltage6, voltage7, voltage8," +
+                           " voltage9, voltage10, voltage11, voltage12," +
+                           " voltage13, voltage14, voltage15, voltage16," +
+                           " voltage17, voltage18, voltage19, voltage20," +
+                           " voltage21, voltage22, voltage23, voltage24," +
+                           " voltage25, voltage26, voltage27, voltage28," +
+                           " from voltage ORDER BY id DESC LIMIT 1;", con)
+    con.close()
+    ave = df.mean(axis=1)
+    return '{}'.format(ave[0])
+
+# Callback for rpm update
+@app.callback(Output(component_id='rpm-value', component_property='children'),
+    [Input('realtime-rpm-update', 'n_intervals')])
+def update_rpm(interval):
+    # get new rpm
+    con = pymysql.connect(host='localhost',
+                          port=8889,
+                          user='uscsolar',
+                          password='solarcar',
+                          db='uscsolarcar',
+                          charset='utf8',
+                          cursorclass=pymysql.cursors.DictCursor)
+    df = pd.read_sql_query('SELECT rpm from motor ORDER BY id DESC LIMIT 1;', con)
+    con.close()
+
+    return '{}'.format(df['rpm'][0])
+
+
+# Callback for operating current update
+@app.callback(Output('dynamic-op-current', 'figure'), [Input('dynamic-op-current-update', 'n_intervals')])
+def get_opcurrent(interval):
 
     con = pymysql.connect(host='localhost',
                           port=8889,
@@ -152,15 +263,11 @@ def get_voltage(interval):
                           db='uscsolarcar',
                           charset='utf8',
                           cursorclass=pymysql.cursors.DictCursor)
-    df = pd.read_sql_query('SELECT voltage from test_table ORDER BY id DESC LIMIT 80;', con)
+    df = pd.read_sql_query('SELECT current from workCondition ORDER BY id DESC LIMIT 200;', con)
     con.close()
-    # con = sqlite3.connect("./Data/wind-data.db")
-    # df = pd.read_sql_query('SELECT Speed, SpeedError, Direction from Wind where\
-    #                         rowid > "{}" AND rowid <= "{}";'
-    #                         .format(total_time-200, total_time), con)
 
     trace = go.Scatter(
-        y=df['voltage'],
+        y=df['current'],
         line= go.scatter.Line(
             color='#990000'
         ),
@@ -170,128 +277,19 @@ def get_voltage(interval):
     layout = go.Layout(
         height=450,
         xaxis=dict(
-            # range=[0, 200],
             showgrid=False,
             showline=False,
             zeroline=False,
             fixedrange=True,
-            # tickvals=[0, 50, 100, 150, 200],
-            # ticktext=['200', '150', '100', '50', '0'],
             title='Time Elapsed (sec)'
         ),
         yaxis=dict(
-             range=[min(0, min(df['voltage'])),
-                    max(5, max(df['voltage']))],
+            range=[min(0, min(df['current'])),
+                   max(4, max(df['current']))],
             showline=False,
             fixedrange=True,
             zeroline=False,
-            nticks=max(6, round(df['voltage'].iloc[-1]/10))
-        ),
-        margin=go.layout.Margin(
-            t=45,
-            l=50,
-            r=50
-        )
-    )
-
-    return go.Figure(data=[trace], layout=layout)
-
-
-# Callback for power update
-@app.callback(Output('dynamic-power', 'figure'),
-              [Input('dynamic-voltage-update', 'n_intervals')])
-def get_power(interval):
-    # get power data
-
-    con = pymysql.connect(host='localhost',
-                          port=8889,
-                          user='uscsolar',
-                          password='solarcar',
-                          db='uscsolarcar',
-                          charset='utf8',
-                          cursorclass=pymysql.cursors.DictCursor)
-    df = pd.read_sql_query('SELECT power from test_table ORDER BY id DESC LIMIT 80;', con)
-    con.close()
-
-    trace = go.Scatter(
-        y=df['power'],
-        line= go.scatter.Line(
-            color='#990000'
-        ),
-        mode='lines'
-    )
-
-    layout = go.Layout(
-        # height=450,
-        xaxis=dict(
-            # range=[0, 200],
-            showgrid=False,
-            showline=False,
-            zeroline=False,
-            fixedrange=True,
-            # tickvals=[0, 50, 100, 150, 200],
-            # ticktext=['200', '150', '100', '50', '0'],
-            title='Time Elapsed (sec)'
-        ),
-        yaxis=dict(
-            range=[min(0, min(df['power'])),
-                   max(50, max(df['power']))],
-            showline=False,
-            fixedrange=True,
-            zeroline=False,
-            nticks=max(6, round(df['power'].iloc[-1]/10))
-        ),
-        margin=go.layout.Margin(
-            t=45,
-            l=50,
-            r=50
-        )
-    )
-
-    return go.Figure(data=[trace], layout=layout)
-
-
-# Callback for speed update
-@app.callback(Output('dynamic-speed', 'figure'), [Input('dynamic-speed-update', 'n_intervals')])
-def get_temp(interval):
-
-    con = pymysql.connect(host='localhost',
-                          port=8889,
-                          user='uscsolar',
-                          password='solarcar',
-                          db='uscsolarcar',
-                          charset='utf8',
-                          cursorclass=pymysql.cursors.DictCursor)
-    df = pd.read_sql_query('SELECT speed from test_table ORDER BY id DESC LIMIT 200;', con)
-    con.close()
-
-    trace = go.Scatter(
-        y=df['speed'],
-        line= go.scatter.Line(
-            color='#990000'
-        ),
-        mode='lines'
-    )
-
-    layout = go.Layout(
-        height=450,
-        xaxis=dict(
-            range=[0, 200],
-            showgrid=False,
-            showline=False,
-            zeroline=False,
-            fixedrange=True,
-            tickvals=[0, 50, 100, 150, 200],
-            ticktext=['200', '150', '100', '50', '0'],
-            title='Time Elapsed (sec)'
-        ),
-        yaxis=dict(
-            range=[min(0, min(df['speed'])),
-                   max(45, max(df['speed']))],
-            showline=False,
-            fixedrange=True,
-            zeroline=False,
-            nticks=max(6, round(df['speed'].iloc[-1]/10))
+            nticks=max(6, round(df['current'].iloc[-1]/10))
         ),
         margin=go.layout.Margin(
             t=45,
