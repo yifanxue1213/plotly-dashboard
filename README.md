@@ -27,11 +27,39 @@ Use MySQL database running on localhost to store and management the data.
 > Not using SQLite3 for concurrent access problem
 
 ##### Database Data Scheme
-|id | timestamp | t1 | ... | tn | voltage | power | speed |
-|--- |:-:| :-:| :-:| :-:| :-:| :-:| --:|
+**Data from BMS Arduino**:
+
+**temporature**
+
+|id | timestamp | temp1 | ... | temp24 |
+|--- |:-:| :-:| :-:| --:|
 
 `id` is auto increment int as primary key,
 `timestamp` is the default timestamp when insert.
 
-`t1` to `tn` is the n temperature sensors, in double.
-`voltage`, `power`, `speed` are reading from sensors, in double.
+
+**voltage**
+
+|id | timestamp | voltage1 | ... | voltage28 |
+|--- |:-:| :-:| :-:| --:|
+
+**Data from CAN Arduino**:
+
+**motor**
+
+|id | timestamp | current | rpm | temp |
+|--- |:-:| :-:| :-:| --:|
+
+`rpm` round per minutes;
+`temp` temprature of motor, null now.
+
+**workCondition**
+
+|id | timestamp | voltage | current | outputVoltage |
+|--- |:-:| :-:| :-:| --:|
+
+`voltage` array of voltage, null now.
+`current` array of voltage, null now.
+`outputVoltage` motor output voltage.
+
+
