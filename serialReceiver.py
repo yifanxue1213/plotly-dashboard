@@ -60,7 +60,7 @@ if __name__ == '__main__':
                     # parse value
                     for i in range(0, numOfVoltageSensors):
                         voltageArray[i] = float(tokens[i + 1])
-                        sql = sql + "`voltage" + (i + 1) + "`, "
+                        sql = sql + "`voltage" + str(i + 1) + "`, "
                         sqlValues = sqlValues + "%s, "
                     sql = sql[:-2] + ") VALUES (" + sqlValues[:-2] + ")"
                     if DEBUG > 1:
@@ -73,7 +73,7 @@ if __name__ == '__main__':
                     sqlValues = ""
                     for i in range(0, numOfTempSensors):
                         tempratureArray[i] = float(tokens[i + 1])
-                        sql = sql + "`temp" + (i + 1) + "`, "
+                        sql = sql + "`temp" + str(i + 1) + "`, "
                         sqlValues = sqlValues + "%s, "
                     sql = sql[:-2] + ") VALUES (" + sqlValues[:-2] + ")"
                     if DEBUG > 1:
@@ -90,13 +90,14 @@ if __name__ == '__main__':
                     with connection.cursor() as cursor:
                         cursor.execute(sql, (motorOpCurrent, rpm))
                 elif tokens[0] == "condition":
+                    opCurrent = float(tokens[2])
                     outputVoltage = float(tokens[3])
                     sql = "INSERT INTO `" + workConditionTableName + \
-                          "` (`outputVoltage`) VALUES (%s)"
+                          "` (`current`, ``outputVoltage`) VALUES (%s, %s)"
                     if DEBUG > 1:
                         print("DEBUG: " + sql)
                     with connection.cursor() as cursor:
-                        cursor.execute(sql, (outputVoltage))
+                        cursor.execute(sql, (opCurrent, outputVoltage))
 
                 connection.commit()
 
