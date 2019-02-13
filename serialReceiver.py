@@ -22,7 +22,7 @@ DEBUG = 1 # 2 for verbose, 1 for simple debug put, 0 for non debug info
 # still need to change to update database in a less frequency
 if __name__ == '__main__':
     # use `ls /dev/tty.usb*` to find the proper port for current experiment
-    serialPort = '/dev/tty.usbserial-14520'
+    serialPort = '/dev/tty.usbserial-1460'
     # connect to DB
     connection = pymysql.connect(host=DBHost,
                                  port= DBPort,
@@ -52,13 +52,14 @@ if __name__ == '__main__':
                     print("DEBUG: " + line)
                 if line.rstrip() == "":
                     continue
-                tokens = str.split(str=" ")
+                tokens = line.split(" ")
                 if tokens[0] == "voltage":
                     # generate SQL query
                     sql = "INSERT INTO `" + voltageTableName + "` ("
                     sqlValues = ""
                     # parse value
                     for i in range(0, numOfVoltageSensors):
+                        print(tokens[i+1])
                         voltageArray[i] = float(tokens[i + 1])
                         sql = sql + "`voltage" + str(i + 1) + "`, "
                         sqlValues = sqlValues + "%s, "
@@ -68,7 +69,7 @@ if __name__ == '__main__':
                     # execute query
                     with connection.cursor() as cursor:
                         cursor.execute(sql, voltageArray)
-                elif tokens[0] == "temporature":
+                elif tokens[0] == "temperature":
                     sql = "INSERT INTO `" + tempratureTableName + "` ("
                     sqlValues = ""
                     for i in range(0, numOfTempSensors):
