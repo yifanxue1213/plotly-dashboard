@@ -9,6 +9,9 @@ Dashboard for sensor data using Dash from plot.ly
 
 ## Usage
 - Check MySQL is running, proper database and tables are set.
+  - MAMP is recommended for fast setup on macOS, phpmyadmin is a good GUI tool to deal with MySQL, which packaged in MAMP as well.
+  - XAMPP is equivalent MAMP on windows.
+  - Linux user should know what they are doing.
 - Check the configuration for serial port in `serialReceiver.py`.
 - Run `python dashboard.py` to start the dashboard webserver. The access url will shown in terminal.
 - Run `python serialReceiver.py` to receive and update sensor data.
