@@ -4,7 +4,7 @@ Dashboard for sensor data using Dash from plot.ly
 
 ## Installation & Requirements
 - Create a new virtual environment.
-- Run `pip install`.
+- pip install -r requirements.txt
 - All commands are run with Python3. Please config or change cmd according to your local environment.
 
 ## Usage
