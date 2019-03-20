@@ -1,7 +1,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output, State, Event
+from dash.dependencies import Input, Output, State
 import plotly.plotly as py
 import plotly.graph_objs as go
 from scipy.stats import rayleigh
