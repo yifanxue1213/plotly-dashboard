@@ -53,52 +53,18 @@ if __name__ == '__main__':
                 if line.rstrip() == "":
                     continue
                 tokens = line.split(" ")
+                table=sqlDriver(numOfTempSensors, numOfVoltageSensors,
+                                 voltageTableName, tempratureTableName, motorTableName,
+                                    workConditionTableName,tokens,sql)
                 if tokens[0] == "voltage":
                     # generate SQL query
-                    sql = "INSERT INTO `" + voltageTableName + "` ("
-                    sqlValues = ""
-                    # parse value
-                    for i in range(0, numOfVoltageSensors):
-                        print(tokens[i+1])
-                        voltageArray[i] = float(tokens[i + 1])
-                        sql = sql + "`voltage" + str(i + 1) + "`, "
-                        sqlValues = sqlValues + "%s, "
-                    sql = sql[:-2] + ") VALUES (" + sqlValues[:-2] + ")"
-                    if DEBUG > 1:#1
-                        print("DEBUG: " + sql)
-                    # execute query
-                    with connection.cursor() as cursor:
-                        cursor.execute(sql, voltageArray)
+                    table.voltage()
                 elif tokens[0] == "temperature":
-                    sql = "INSERT INTO `" + tempratureTableName + "` ("
-                    sqlValues = ""
-                    for i in range(0, numOfTempSensors):
-                        tempratureArray[i] = float(tokens[i + 1])
-                        sql = sql + "`temp" + str(i + 1) + "`, "
-                        sqlValues = sqlValues + "%s, "
-                    sql = sql[:-2] + ") VALUES (" + sqlValues[:-2] + ")"
-                    if DEBUG > 1:
-                        print("DEBUG: " + sql)
-                    with connection.cursor() as cursor:
-                        cursor.execute(sql, tempratureArray)
+                    table.temperature()
                 elif tokens[0] == "motor":
-                    motorOpCurrent = float(tokens[1])
-                    rpm = int(tokens[2])
-                    sql = "INSERT INTO `" + motorTableName + \
-                          "` (`current`, `rpm`) VALUES (%s, %s)"
-                    if DEBUG > 1:
-                        print("DEBUG: " + sql)
-                    with connection.cursor() as cursor:
-                        cursor.execute(sql, (motorOpCurrent, rpm))
+                    table.motor()
                 elif tokens[0] == "condition":
-                    opCurrent = float(tokens[2])
-                    outputVoltage = float(tokens[3])
-                    sql = "INSERT INTO `" + workConditionTableName + \
-                          "` (`current`, ``outputVoltage`) VALUES (%s, %s)"
-                    if DEBUG > 1:
-                        print("DEBUG: " + sql)
-                    with connection.cursor() as cursor:
-                        cursor.execute(sql, (opCurrent, outputVoltage))
+                    table.condition()
 
                 connection.commit()
 
