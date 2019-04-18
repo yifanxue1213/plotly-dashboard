@@ -48,7 +48,7 @@ if __name__ == '__main__':
         while True:
             try:
                 line = ser.readline().decode("utf-8")  # decode byte array into string  # readline(timeout=1)
-                if DEBUG > 1:
+                if DEBUG > 1:  #1
                     print("DEBUG: " + line)
                 if line.rstrip() == "":
                     continue
@@ -64,7 +64,7 @@ if __name__ == '__main__':
                         sql = sql + "`voltage" + str(i + 1) + "`, "
                         sqlValues = sqlValues + "%s, "
                     sql = sql[:-2] + ") VALUES (" + sqlValues[:-2] + ")"
-                    if DEBUG > 1:
+                    if DEBUG > 1:#1
                         print("DEBUG: " + sql)
                     # execute query
                     with connection.cursor() as cursor:
